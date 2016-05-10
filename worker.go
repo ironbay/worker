@@ -24,7 +24,9 @@ func (worker *Worker) Run() {
 	go func() {
 		for _ = range ticker.C {
 			worker.total += worker.completed
-			log.Println(worker.total, "[", worker.completed, "/s ]")
+			if !worker.Silent {
+				log.Println(worker.total, "[", worker.completed, "/s ]")
+			}
 			worker.completed = 0
 		}
 	}()
