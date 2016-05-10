@@ -9,6 +9,7 @@ import (
 type Worker struct {
 	Produce   func(chan []interface{})
 	Consume   func([]interface{}) bool
+	Silent    bool
 	Count     int
 	Retry     int
 	completed int
@@ -31,17 +32,23 @@ func (worker *Worker) Run() {
 	if worker.Count == 0 {
 		worker.Count = 500
 	}
-	log.Println("Spawning", worker.Count, "workers")
+	if !worker.Silent {
+		log.Println("Spawning", worker.Count, "workers")
+	}
 	for i := 0; i < worker.Count; i++ {
 		wg.Add(1)
 		go worker.spin(i, queue, &wg)
 	}
-	log.Println("Working...")
+	if !worker.Silent {
+		log.Println("Working...")
+	}
 	worker.Produce(queue)
 	close(queue)
 	wg.Wait()
 	ticker.Stop()
-	log.Println("Completed", worker.total+worker.completed, "tasks")
+	if !worker.Silent {
+		log.Println("Completed", worker.total+worker.completed, "tasks")
+	}
 }
 
 func (worker *Worker) spin(id int, queue chan []interface{}, wg *sync.WaitGroup) {

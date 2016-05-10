@@ -8,15 +8,18 @@ import (
 
 type Pool struct {
 	Buffer    int
+	Name      string
 	queue     chan bool
+	result    chan interface{}
 	wg        sync.WaitGroup
 	start     time.Time
 	completed int
 	total     int
 }
 
-func NewPool(buffer int) *Pool {
+func NewPool(buffer int, name string) *Pool {
 	return &Pool{
+		Name:   name,
 		Buffer: buffer,
 		queue:  make(chan bool, buffer),
 		start:  time.Now(),
@@ -47,6 +50,6 @@ func (p *Pool) Time() {
 
 func (p *Pool) Wait() int {
 	p.wg.Wait()
-	log.Println(time.Now().Sub(p.start))
+	log.Println(p.Name, time.Now().Sub(p.start))
 	return p.total
 }
