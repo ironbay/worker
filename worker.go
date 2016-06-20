@@ -8,7 +8,7 @@ import (
 
 type Worker struct {
 	Produce   func(chan []interface{})
-	Consume   func([]interface{}) bool
+	Consume   func([]interface{}) error
 	Silent    bool
 	Count     int
 	Retry     int
@@ -16,20 +16,24 @@ type Worker struct {
 	total     int
 }
 
+var count = 0
+
 func (worker *Worker) Run() {
 	queue := make(chan []interface{}, 1000)
 	worker.completed = 0
 	worker.total = 0
 	ticker := time.NewTicker(time.Second)
-	go func() {
-		for _ = range ticker.C {
-			worker.total += worker.completed
-			if !worker.Silent {
-				log.Println(worker.total, "[", worker.completed, "/s ]")
+	if !worker.Silent {
+		go func() {
+			for range ticker.C {
+				worker.total += worker.completed
+				if !worker.Silent {
+					log.Println(worker.total, "[", worker.completed, "/s ]")
+				}
+				worker.completed = 0
 			}
-			worker.completed = 0
-		}
-	}()
+		}()
+	}
 	var wg sync.WaitGroup
 	if worker.Count == 0 {
 		worker.Count = 500
@@ -51,6 +55,10 @@ func (worker *Worker) Run() {
 	if !worker.Silent {
 		log.Println("Completed", worker.total+worker.completed, "tasks")
 	}
+	count++
+	if count == 100 {
+		log.Println("100 workers done")
+	}
 }
 
 func (worker *Worker) spin(id int, queue chan []interface{}, wg *sync.WaitGroup) {
@@ -59,9 +67,9 @@ func (worker *Worker) spin(id int, queue chan []interface{}, wg *sync.WaitGroup)
 	for line := range queue {
 		count := 0
 		for {
-			success := worker.Consume(line)
+			err := worker.Consume(line)
 			count++
-			if success {
+			if err == nil {
 				break
 			}
 			if count > worker.Retry {
